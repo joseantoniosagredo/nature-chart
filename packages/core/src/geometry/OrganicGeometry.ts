@@ -1,9 +1,12 @@
 import type {
+  BranchGeometryParams,
+  BranchSkeletonResult,
   OrientedPoint2D,
   PetalGeometryParams,
   Point2D,
   StemGeometryParams,
   TendrilGeometryParams,
+  TreeRingGeometryParams,
   VineGeometryParams,
   VineSkeletonResult,
 } from '../types';
@@ -475,6 +478,191 @@ export function generateStemPath(params: StemGeometryParams): string {
 }
 
 /**
+ * Ruido coherente periódico en el ángulo (período 2π) para contornos cerrados.
+ * A diferencia de `organicNoise1D`, solo usa armónicos enteros, por lo que el contorno
+ * cierra sin costura. Rango aproximado [-1, 1].
+ */
+export function organicPeriodicNoise(angleRad: number, seed: number): number {
+  const h2 = Math.sin(angleRad * 2 + seed * TWO_PI);
+  const h3 = 0.55 * Math.sin(angleRad * 3 + seed * 19.193);
+  const h5 = 0.3 * Math.cos(angleRad * 5 + seed * 37.719);
+  const h9 = 0.15 * Math.sin(angleRad * 9 + seed * 53.311);
+  return (h2 + h3 + h5 + h9) / 2;
+}
+
+/**
+ * Variante cerrada de `pointsToSmoothBezierCommands`: spline Catmull-Rom periódica
+ * que termina en `Z` con continuidad C1 en el punto de cierre.
+ */
+export function pointsToClosedSmoothBezierCommands(
+  points: readonly Point2D[],
+  tension = 1 / 6
+): string {
+  const n = points.length;
+  if (n < 3) return '';
+
+  const segments: string[] = [`M ${fmt(points[0].x)} ${fmt(points[0].y)}`];
+  for (let i = 0; i < n; i++) {
+    const p0 = points[(i - 1 + n) % n];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % n];
+    const p3 = points[(i + 2) % n];
+    segments.push(
+      `C ${fmt(p1.x + (p2.x - p0.x) * tension)} ${fmt(p1.y + (p2.y - p0.y) * tension)}, ` +
+        `${fmt(p2.x - (p3.x - p1.x) * tension)} ${fmt(p2.y - (p3.y - p1.y) * tension)}, ` +
+        `${fmt(p2.x)} ${fmt(p2.y)}`
+    );
+  }
+  segments.push('Z');
+  return segments.join(' ');
+}
+
+/**
+ * Punto del contorno de un anillo de crecimiento de radio medio `radius` en el ángulo
+ * `angleRad` (convención D3: 0 = 12 en punto, sentido horario).
+ * El contorno es homotético respecto a (cx, cy): todos los anillos del tronco quedan anidados.
+ */
+export function treeRingPointAt(
+  params: Pick<TreeRingGeometryParams, 'cx' | 'cy' | 'wobble' | 'eccentricity' | 'seed'>,
+  radius: number,
+  angleRad: number
+): Point2D {
+  const { cx, cy, wobble, eccentricity, seed } = params;
+  const shape = 1 + wobble * organicPeriodicNoise(angleRad, seed);
+  const eccAngle = seed * TWO_PI;
+  return {
+    x: cx + radius * (eccentricity * Math.cos(eccAngle) + shape * Math.sin(angleRad)),
+    y: cy + radius * (eccentricity * Math.sin(eccAngle) - shape * Math.cos(angleRad)),
+  };
+}
+
+/**
+ * Genera el trazado de un anillo de crecimiento como banda cerrada
+ * (contorno exterior + contorno interior), pensado para `fill-rule="evenodd"`.
+ * Con `innerRadius ≈ 0` devuelve un disco macizo (médula).
+ */
+export function generateTreeRingPath(params: TreeRingGeometryParams): string {
+  const { innerRadius, outerRadius, samples = 48 } = params;
+
+  const loop = (radius: number): string => {
+    const pts: Point2D[] = [];
+    for (let i = 0; i < samples; i++) {
+      pts.push(treeRingPointAt(params, radius, (i / samples) * TWO_PI));
+    }
+    return pointsToClosedSmoothBezierCommands(pts);
+  };
+
+  const outer = loop(Math.max(0.5, outerRadius));
+  return innerRadius > 0.5 ? `${outer} ${loop(innerRadius)}` : outer;
+}
+
+/**
+ * Esqueleto de una rama leñosa: curva cúbica que sale tangente a la rama madre
+ * (`startAngleDeg`) y se dirige al extremo, con perturbación coherente anclada en ambos
+ * extremos y ahusamiento alométrico entre `baseThickness` y `tipThickness`.
+ */
+export function generateBranchSkeleton(params: BranchGeometryParams): BranchSkeletonResult {
+  const { x0, y0, x1, y1, startAngleDeg, baseThickness, tipThickness, gnarl, seed } = params;
+  const length = Math.hypot(x1 - x0, y1 - y0);
+
+  if (length < 1e-3) {
+    return {
+      bodyPath: `M ${fmt(x0)} ${fmt(y0)} Z`,
+      apex: { x: x0, y: y0, t: 1, angleDeg: startAngleDeg, normalX: 0, normalY: 0, side: 1 },
+    };
+  }
+
+  const startRad = startAngleDeg * DEG_TO_RAD;
+  const c1x = x0 + Math.cos(startRad) * length * 0.42;
+  const c1y = y0 + Math.sin(startRad) * length * 0.42;
+  const arriveLen = Math.hypot(x1 - c1x, y1 - c1y) || 1;
+  const c2x = x1 - ((x1 - c1x) / arriveLen) * length * 0.25;
+  const c2y = y1 - ((y1 - c1y) / arriveLen) * length * 0.25;
+
+  const evaluate = (t: number): Point2D => {
+    const inv = 1 - t;
+    const b0 = inv * inv * inv;
+    const b1 = 3 * inv * inv * t;
+    const b2 = 3 * inv * t * t;
+    const b3 = t * t * t;
+    const bx = b0 * x0 + b1 * c1x + b2 * c2x + b3 * x1;
+    const by = b0 * y0 + b1 * c1y + b2 * c2y + b3 * y1;
+    // Perturbación perpendicular a la cuerda, anclada (sin(πt)) para conectar exactamente con madre e hijas
+    const disp = gnarl * Math.sin(Math.PI * t) * organicNoise1D(t * 1.3, seed);
+    return {
+      x: bx - ((y1 - y0) / length) * disp,
+      y: by + ((x1 - x0) / length) * disp,
+    };
+  };
+
+  const segments = 10;
+  const eps = 0.005;
+  const left: Point2D[] = [];
+  const right: Point2D[] = [];
+  let apex: OrientedPoint2D | null = null;
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const c = evaluate(t);
+    const pPrev = evaluate(Math.max(0, t - eps));
+    const pNext = evaluate(Math.min(1, t + eps));
+    const tLen = Math.hypot(pNext.x - pPrev.x, pNext.y - pPrev.y) || 1;
+    const ux = (pNext.x - pPrev.x) / tLen;
+    const uy = (pNext.y - pPrev.y) / tLen;
+    const halfWidth =
+      0.5 * (baseThickness + (tipThickness - baseThickness) * Math.pow(t, 0.8));
+
+    left.push({ x: c.x - uy * halfWidth, y: c.y + ux * halfWidth });
+    right.push({ x: c.x + uy * halfWidth, y: c.y - ux * halfWidth });
+
+    if (i === segments) {
+      apex = {
+        x: c.x,
+        y: c.y,
+        t: 1,
+        angleDeg: Math.atan2(uy, ux) * RAD_TO_DEG,
+        normalX: -uy,
+        normalY: ux,
+        side: seed >= 0.5 ? 1 : -1,
+      };
+    }
+  }
+
+  const leftCommands = pointsToSmoothBezierCommands(left, 0.3);
+  const rightCommands = pointsToSmoothBezierCommands([...right].reverse(), 0.3).replace(
+    /^M/,
+    'L'
+  );
+
+  return {
+    bodyPath: `${leftCommands} ${rightCommands} Z`,
+    apex: apex ?? { x: x1, y: y1, t: 1, angleDeg: startAngleDeg, normalX: 0, normalY: 0, side: 1 },
+  };
+}
+
+/**
+ * Interpolación lineal en espacio de parámetros de una rama para `.tween(...)`.
+ */
+export function interpolateBranchParams(
+  from: BranchGeometryParams,
+  to: BranchGeometryParams,
+  t: number
+): BranchGeometryParams {
+  const inv = 1 - t;
+  return {
+    x0: from.x0 * inv + to.x0 * t,
+    y0: from.y0 * inv + to.y0 * t,
+    x1: from.x1 * inv + to.x1 * t,
+    y1: from.y1 * inv + to.y1 * t,
+    startAngleDeg: from.startAngleDeg * inv + to.startAngleDeg * t,
+    baseThickness: from.baseThickness * inv + to.baseThickness * t,
+    tipThickness: from.tipThickness * inv + to.tipThickness * t,
+    gnarl: from.gnarl * inv + to.gnarl * t,
+    seed: to.seed,
+  };
+}
+
+/**
  * Genera interpolador de parámetros geométricos de un pétalo para `attrTween('d', ...)`.
  * Garantiza un morphing matemáticamente exacto de las curvas Bézier durante las transiciones.
  */
@@ -537,6 +725,12 @@ export const OrganicGeometry = {
   generateStemPath,
   createPetalPathInterpolator,
   interpolateVineParams,
+  organicPeriodicNoise,
+  pointsToClosedSmoothBezierCommands,
+  treeRingPointAt,
+  generateTreeRingPath,
+  generateBranchSkeleton,
+  interpolateBranchParams,
   HALF_PI,
   TWO_PI,
 } as const;

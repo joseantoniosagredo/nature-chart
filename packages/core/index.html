@@ -274,6 +274,62 @@
         <span>Bifurcaciones laterales generadas con espirales amortiguadas</span>
       </div>
     </section>
+
+    <!-- 4. TREE RING CHART -->
+    <section class="specimen-card col-5">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">IV. <code>TreeRingChart</code></h2>
+          <p class="card-meta">Dendrocronología: anchura del anillo = crecimiento anual (mm)</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-ring-randomize" class="btn btn-outline">Nuevo Clima</button>
+          <button id="btn-ring-add" class="btn btn-outline">+ Año</button>
+        </div>
+      </div>
+      <div id="ring-chart-container" class="chart-stage"></div>
+      <div class="legend-note">
+        <span>Anillos Bézier homotéticos (nunca se cruzan) · madera temprana / tardía</span>
+        <span>Testigo de barrena con nudos <code>&lt;use&gt;</code></span>
+      </div>
+    </section>
+
+    <!-- 5. BRANCH TREE CHART -->
+    <section class="specimen-card col-7">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">V. <code>BranchTreeChart</code></h2>
+          <p class="card-meta">Jerarquía taxonómica: grosor de rama ∝ √(especímenes del subárbol)</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-tree-randomize" class="btn btn-outline">Recontar Herbario</button>
+          <button id="btn-tree-toggle" class="btn btn-outline">± Familia</button>
+        </div>
+      </div>
+      <div id="tree-chart-container" class="chart-stage"></div>
+      <div class="legend-note">
+        <span>Modelo de tuberías (regla de da Vinci) · ramas cúbicas tangentes a la madre</span>
+        <span>Racimos de hojas <code>&lt;use&gt;</code> en nodos terminales</span>
+      </div>
+    </section>
+
+    <!-- 6. LEAF SCATTER CHART -->
+    <section class="specimen-card col-12">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">VI. <code>LeafScatterChart</code></h2>
+          <p class="card-meta">Rasgos foliares: x = luz (µmol/m²s) · y = fotosíntesis · tamaño = área foliar · color = especie</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-leaf-randomize" class="btn btn-outline">Nuevo Muestreo</button>
+        </div>
+      </div>
+      <div id="leaf-chart-container" class="chart-stage-compact"></div>
+      <div class="legend-note">
+        <span>Cada punto es una hoja <code>&lt;use href="#...-leaf"&gt;</code> centrada en (x, y)</span>
+        <span>Morphing en espacio de parámetros {x, y, ángulo, escala}</span>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="/src/main.ts"></script>

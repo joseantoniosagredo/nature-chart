@@ -31,6 +31,9 @@
   - `PetalPieChart.ts` — Polar floral chart with Bézier petals, stamens, and central pistil.
   - `VineBarChart.ts` — Climbing vine bar chart encoding primary height, secondary foliage (`<use>` leaves), and tertiary apical tendrils.
   - `StemLineChart.ts` — Continuous woody stem chart with buds and lateral bifurcations.
+  - `TreeRingChart.ts` — Dendrochronology cross-section: time series as nested (homothetic) growth rings, bark, pith and a labelled core sample.
+  - `BranchTreeChart.ts` — Hierarchy (id/parentId via `d3-hierarchy` `stratify`) grown as a tree; branch thickness follows the pipe model (∝ √subtree value), `<use>` leaf clusters on terminal nodes.
+  - `LeafScatterChart.ts` — Scatter plot of `<use>` leaves (size = area, colour = group with legend, rotation = optional variable).
 - **[`index.html`](./packages/core/index.html) & [`src/main.ts`](./packages/core/src/main.ts)**: Interactive Herbarium playground served by Vite.
 
 ---

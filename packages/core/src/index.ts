@@ -9,6 +9,9 @@ export { AxisHelper } from './core/AxisHelper';
 export { PetalPieChart } from './charts/PetalPieChart';
 export { VineBarChart } from './charts/VineBarChart';
 export { StemLineChart } from './charts/StemLineChart';
+export { TreeRingChart } from './charts/TreeRingChart';
+export { BranchTreeChart } from './charts/BranchTreeChart';
+export { LeafScatterChart } from './charts/LeafScatterChart';
 export {
   mountBotanicalDashboard,
   type PollinatorSpeciesMetric,

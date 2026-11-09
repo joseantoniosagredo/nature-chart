@@ -199,6 +199,52 @@ export interface StemGeometryParams {
   readonly seed: number;
 }
 
+/**
+ * Anillo de crecimiento (dendrocronología). Todos los anillos de un mismo tronco comparten
+ * `cx`, `cy`, `wobble`, `eccentricity` y `seed`, por lo que son homotéticos y nunca se cruzan.
+ */
+export interface TreeRingGeometryParams {
+  readonly cx: number;
+  readonly cy: number;
+  /** Radio medio del borde interior del anillo (0 = médula maciza) */
+  readonly innerRadius: number;
+  /** Radio medio del borde exterior del anillo */
+  readonly outerRadius: number;
+  /** Irregularidad relativa del contorno (0 = círculo perfecto, 0.08 = tronco natural) */
+  readonly wobble: number;
+  /** Desplazamiento relativo de la médula respecto al centro (madera de reacción, 0 - 0.2) */
+  readonly eccentricity: number;
+  /** Semilla compartida por todo el tronco */
+  readonly seed: number;
+  /** Muestras angulares del contorno (default: 48) */
+  readonly samples?: number;
+}
+
+/**
+ * Rama leñosa ahusada que nace en `(x0, y0)` siguiendo la dirección `startAngleDeg`
+ * (heredada de la rama madre) y se curva hasta `(x1, y1)`.
+ */
+export interface BranchGeometryParams {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+  /** Ángulo de salida en grados (convención SVG: 0 = +X, -90 = arriba) */
+  readonly startAngleDeg: number;
+  readonly baseThickness: number;
+  readonly tipThickness: number;
+  /** Intensidad de la perturbación orgánica lateral en px */
+  readonly gnarl: number;
+  readonly seed: number;
+}
+
+export interface BranchSkeletonResult {
+  /** Trazado cerrado (`M ... C ... Z`) de la rama con ahusamiento */
+  readonly bodyPath: string;
+  /** Punto y orientación del extremo de la rama (donde brotan hojas o ramas hijas) */
+  readonly apex: OrientedPoint2D;
+}
+
 // ============================================================================
 // 6. ESCALAS Y EJES BOTÁNICOS (AxisHelper)
 // ============================================================================
@@ -289,4 +335,75 @@ export interface StemLineChartConfig<TData> extends BaseChartConfig<TData> {
   readonly baseThickness?: number;
   readonly tipThickness?: number;
   readonly roughness?: number;
+}
+
+export interface TreeRingChartConfig<TData> extends BaseChartConfig<TData> {
+  /** Métrica de crecimiento anual: controla la anchura del anillo. Los datos van del más antiguo (médula) al más reciente (corteza). */
+  readonly valueAccessor: NumericAccessor<TData>;
+  /** Etiqueta del anillo (normalmente el año) */
+  readonly labelAccessor: StringAccessor<TData>;
+  /** Color opcional por anillo (sustituye la alternancia madera temprana / tardía) */
+  readonly colorAccessor?: StringAccessor<TData>;
+  /** Color de la madera temprana (default: '#EAD7AE') */
+  readonly earlywoodColor?: string;
+  /** Color de la madera tardía y de los límites de anillo (default: '#B98B57') */
+  readonly latewoodColor?: string;
+  /** Color de la corteza (default: palette.axis) */
+  readonly barkColor?: string;
+  /** Grosor de la corteza en px (default: 10) */
+  readonly barkThickness?: number;
+  /** Irregularidad del contorno del tronco (default: 0.06) */
+  readonly wobble?: number;
+  /** Excentricidad de la médula (default: 0.08) */
+  readonly eccentricity?: number;
+  /** Proporción del radio disponible usada por el tronco (default: 0.86) */
+  readonly maxRadiusRatio?: number;
+  /** Ángulo en radianes del testigo de barrena donde se etiquetan los anillos (default: π/2 = derecha) */
+  readonly coreSampleAngle?: number;
+  /** Etiqueta uno de cada N anillos (default: auto según el espacio disponible) */
+  readonly labelEvery?: number;
+}
+
+export interface BranchTreeChartConfig<TData> extends BaseChartConfig<TData> {
+  /** Clave del nodo padre; `null`/`undefined` identifica la raíz (única). `keyAccessor` actúa como id. */
+  readonly parentAccessor: (datum: TData, index: number) => string | number | null | undefined;
+  /** Peso de cada nodo hoja (default: 1). Las ramas suman el peso de su subárbol. */
+  readonly valueAccessor?: NumericAccessor<TData>;
+  /** Etiqueta mostrada junto a las hojas terminales */
+  readonly labelAccessor?: StringAccessor<TData>;
+  /** Color opcional del follaje por nodo hoja (default: por rama principal) */
+  readonly colorAccessor?: StringAccessor<TData>;
+  /** Grosor del tronco en px (default: 22) */
+  readonly trunkThickness?: number;
+  /** Grosor mínimo de las ramillas terminales (default: 1.4) */
+  readonly minBranchThickness?: number;
+  /** Apertura total de la copa en radianes (default: 0.62π) */
+  readonly spreadAngle?: number;
+  /** Proporción de la altura ocupada por el fuste antes de la primera bifurcación (default: 0.26) */
+  readonly trunkRatio?: number;
+  /** Perturbación orgánica de las ramas en px (default: 5) */
+  readonly gnarl?: number;
+  /** Muestra etiquetas en las hojas terminales (default: true) */
+  readonly showLabels?: boolean;
+}
+
+export interface LeafScatterChartConfig<TData> extends BaseChartConfig<TData> {
+  readonly xAccessor: NumericAccessor<TData>;
+  readonly yAccessor: NumericAccessor<TData>;
+  /** Métrica opcional de área foliar: controla la escala de la hoja (escala raíz cuadrada) */
+  readonly sizeAccessor?: NumericAccessor<TData>;
+  /** Grupo / especie: asigna un pigmento de la paleta de follaje */
+  readonly groupAccessor?: StringAccessor<TData>;
+  /** Color explícito por dato (tiene prioridad sobre `groupAccessor`) */
+  readonly colorAccessor?: StringAccessor<TData>;
+  /** Orientación de la hoja en grados (0 = derecha, -90 = arriba). Default: inclinación determinista por clave */
+  readonly angleAccessor?: NumericAccessor<TData>;
+  /** Texto del tooltip nativo (`<title>`) */
+  readonly labelAccessor?: StringAccessor<TData>;
+  /** Rango de escala de la hoja [min, max] (default: [0.6, 1.9]) */
+  readonly leafScaleRange?: readonly [number, number];
+  readonly xDomain?: readonly [number, number];
+  readonly yDomain?: readonly [number, number];
+  readonly xLabel?: string;
+  readonly yLabel?: string;
 }

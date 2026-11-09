@@ -1,7 +1,10 @@
 import {
+  BranchTreeChart,
   ChartEnvironment,
+  LeafScatterChart,
   PetalPieChart,
   StemLineChart,
+  TreeRingChart,
   VineBarChart,
   type BotanicalCultivarGrowth,
   type PollinatorSpeciesMetric,
@@ -144,8 +147,177 @@ stemChart.init();
 stemChart.update(generateStemSeries());
 
 // ============================================================================
-// 4. CONTROLES INTERACTIVOS DEL DOM
+// 4. TREE RING CHART (Dendrocronología)
 // ============================================================================
+
+interface AnnualGrowth {
+  readonly year: number;
+  readonly ringWidthMm: number;
+}
+
+let ringYears = 24;
+
+function generateRingSeries(count: number): AnnualGrowth[] {
+  return Array.from({ length: count }, (_, idx) => ({
+    year: 2000 + idx,
+    // Crecimiento juvenil vigoroso que decrece con la edad + variabilidad climática
+    ringWidthMm: Number((1.2 + 2.6 * Math.exp(-idx / 9) + Math.random() * 1.6).toFixed(2)),
+  }));
+}
+
+const ringEnv = new ChartEnvironment({
+  container: '#ring-chart-container',
+  margin: { top: 20, right: 20, bottom: 20, left: 20 },
+  enableOrganicFilter: false,
+});
+
+const ringChart = new TreeRingChart<AnnualGrowth>(ringEnv, {
+  keyAccessor: (d) => d.year,
+  valueAccessor: (d) => d.ringWidthMm,
+  labelAccessor: (d) => String(d.year),
+  ariaLabel: 'Anchura de anillos de crecimiento por año',
+});
+
+let ringData = generateRingSeries(ringYears);
+ringChart.init();
+ringChart.update(ringData);
+
+// ============================================================================
+// 5. BRANCH TREE CHART (Jerarquía Taxonómica)
+// ============================================================================
+
+interface TaxonNode {
+  readonly id: string;
+  readonly parent: string | null;
+  readonly name: string;
+  readonly specimens: number;
+}
+
+const TAXONOMY: ReadonlyArray<Omit<TaxonNode, 'specimens'>> = [
+  { id: 'plantae', parent: null, name: 'Plantae' },
+  { id: 'rosaceae', parent: 'plantae', name: 'Rosaceae' },
+  { id: 'rosa', parent: 'rosaceae', name: 'Rosa' },
+  { id: 'prunus', parent: 'rosaceae', name: 'Prunus' },
+  { id: 'malus', parent: 'rosaceae', name: 'Malus' },
+  { id: 'fagaceae', parent: 'plantae', name: 'Fagaceae' },
+  { id: 'quercus', parent: 'fagaceae', name: 'Quercus' },
+  { id: 'fagus', parent: 'fagaceae', name: 'Fagus' },
+  { id: 'lamiaceae', parent: 'plantae', name: 'Lamiaceae' },
+  { id: 'salvia', parent: 'lamiaceae', name: 'Salvia' },
+  { id: 'lavandula', parent: 'lamiaceae', name: 'Lavandula' },
+  { id: 'thymus', parent: 'lamiaceae', name: 'Thymus' },
+  { id: 'mentha', parent: 'lamiaceae', name: 'Mentha' },
+  { id: 'pinaceae', parent: 'plantae', name: 'Pinaceae' },
+  { id: 'pinus', parent: 'pinaceae', name: 'Pinus' },
+  { id: 'abies', parent: 'pinaceae', name: 'Abies' },
+];
+
+let includePinaceae = true;
+
+function generateTaxonData(): TaxonNode[] {
+  return TAXONOMY.filter(
+    (t) => includePinaceae || (t.id !== 'pinaceae' && t.parent !== 'pinaceae')
+  ).map((t) => ({ ...t, specimens: Math.round(4 + Math.random() * 46) }));
+}
+
+const treeEnv = new ChartEnvironment({
+  container: '#tree-chart-container',
+  margin: { top: 16, right: 16, bottom: 8, left: 16 },
+  enableOrganicFilter: true,
+  roughness: 1.2,
+});
+
+const treeChart = new BranchTreeChart<TaxonNode>(treeEnv, {
+  keyAccessor: (d) => d.id,
+  parentAccessor: (d) => d.parent,
+  valueAccessor: (d) => d.specimens,
+  labelAccessor: (d) => d.name,
+  ariaLabel: 'Especímenes del herbario por familia y género',
+});
+
+treeChart.init();
+treeChart.update(generateTaxonData());
+
+// ============================================================================
+// 6. LEAF SCATTER CHART (Rasgos Foliares)
+// ============================================================================
+
+interface LeafTraitSample {
+  readonly sampleId: string;
+  readonly species: string;
+  readonly lightLevel: number;
+  readonly photosynthesis: number;
+  readonly leafAreaCm2: number;
+}
+
+const SCATTER_SPECIES = ['Quercus ilex', 'Fagus sylvatica', 'Salvia officinalis'] as const;
+
+function generateLeafSamples(): LeafTraitSample[] {
+  return Array.from({ length: 36 }, (_, idx) => {
+    const species = SCATTER_SPECIES[idx % SCATTER_SPECIES.length];
+    const speciesIdx = idx % SCATTER_SPECIES.length;
+    const light = Math.round(80 + Math.random() * 1400);
+    // Curva de saturación lumínica con asíntota distinta por especie
+    const pMax = [14, 10, 18][speciesIdx];
+    return {
+      sampleId: `s-${idx}`,
+      species,
+      lightLevel: light,
+      photosynthesis: Number(
+        (pMax * (1 - Math.exp(-light / 380)) + (Math.random() - 0.5) * 2.5).toFixed(1)
+      ),
+      leafAreaCm2: Math.round(6 + Math.random() * 60),
+    };
+  });
+}
+
+const leafEnv = new ChartEnvironment({
+  container: '#leaf-chart-container',
+  margin: { top: 24, right: 36, bottom: 48, left: 56 },
+  enableOrganicFilter: false,
+});
+
+const leafChart = new LeafScatterChart<LeafTraitSample>(leafEnv, {
+  keyAccessor: (d) => d.sampleId,
+  xAccessor: (d) => d.lightLevel,
+  yAccessor: (d) => d.photosynthesis,
+  sizeAccessor: (d) => d.leafAreaCm2,
+  groupAccessor: (d) => d.species,
+  labelAccessor: (d) =>
+    `${d.species} · ${d.lightLevel} µmol/m²s · ${d.photosynthesis} µmol CO₂ · ${d.leafAreaCm2} cm²`,
+  ariaLabel: 'Fotosíntesis frente a luz por especie',
+});
+
+leafChart.init();
+leafChart.update(generateLeafSamples());
+
+// ============================================================================
+// 7. CONTROLES INTERACTIVOS DEL DOM
+// ============================================================================
+
+document.getElementById('btn-ring-randomize')?.addEventListener('click', () => {
+  ringData = generateRingSeries(ringYears);
+  ringChart.update(ringData);
+});
+
+document.getElementById('btn-ring-add')?.addEventListener('click', () => {
+  ringYears++;
+  ringData = [...ringData, ...generateRingSeries(ringYears).slice(-1)];
+  ringChart.update(ringData);
+});
+
+document.getElementById('btn-tree-randomize')?.addEventListener('click', () => {
+  treeChart.update(generateTaxonData());
+});
+
+document.getElementById('btn-tree-toggle')?.addEventListener('click', () => {
+  includePinaceae = !includePinaceae;
+  treeChart.update(generateTaxonData());
+});
+
+document.getElementById('btn-leaf-randomize')?.addEventListener('click', () => {
+  leafChart.update(generateLeafSamples());
+});
 
 document.getElementById('btn-petal-randomize')?.addEventListener('click', () => {
   petalChart.update(generatePollinatorData(activePetalCount));
@@ -191,6 +363,10 @@ document.getElementById('btn-season-all')?.addEventListener('click', () => {
   petalChart.update(generatePollinatorData(activePetalCount));
   vineChart.update(generateVineData(activeVineCount));
   stemChart.update(generateStemSeries());
+  ringData = generateRingSeries(ringYears);
+  ringChart.update(ringData);
+  treeChart.update(generateTaxonData());
+  leafChart.update(generateLeafSamples());
 });
 
 const widthSlider = document.getElementById('width-slider') as HTMLInputElement | null;
