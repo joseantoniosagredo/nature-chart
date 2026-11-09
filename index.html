@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>d3-plant-lib — Laboratorio de Visualización Botánica</title>
+  <style>
+    :root {
+      --bg-page: #F2ECE1;
+      --bg-card: #FAF7F0;
+      --border-herbarium: #D8CEBE;
+      --ink-primary: #253022;
+      --ink-secondary: #5B6455;
+      --accent-green: #2D5A27;
+      --accent-green-hover: #3E7337;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--ink-primary);
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.5;
+    }
+
+    header {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 28px 16px;
+      border-bottom: 1px solid var(--border-herbarium);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: normal;
+      letter-spacing: -0.02em;
+      color: var(--accent-green);
+    }
+
+    .brand-subtitle {
+      margin: 4px 0 0;
+      font-size: 0.95rem;
+      color: var(--ink-secondary);
+      font-style: italic;
+    }
+
+    .global-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 0.85rem;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--accent-green);
+      background: var(--accent-green);
+      color: #FAF7F0;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--accent-green-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--accent-green);
+    }
+
+    .btn-outline:hover {
+      background: rgba(45, 90, 39, 0.08);
+      color: var(--accent-green);
+    }
+
+    main {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px 28px 48px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+      transition: width 0.2s ease;
+    }
+
+    .specimen-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-herbarium);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(37, 48, 34, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .col-5 {
+      grid-column: span 5;
+    }
+
+    .col-7 {
+      grid-column: span 7;
+    }
+
+    .col-12 {
+      grid-column: span 12;
+    }
+
+    @media (max-width: 980px) {
+      .col-5, .col-7 {
+        grid-column: span 12;
+      }
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border-herbarium);
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--ink-primary);
+    }
+
+    .card-meta {
+      margin: 2px 0 0;
+      font-size: 0.82rem;
+      color: var(--ink-secondary);
+      font-style: italic;
+    }
+
+    .card-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .chart-stage {
+      width: 100%;
+      height: 410px;
+      position: relative;
+    }
+
+    .chart-stage-compact {
+      width: 100%;
+      height: 310px;
+      position: relative;
+    }
+
+    .legend-note {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(216, 206, 190, 0.5);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 0.78rem;
+      color: var(--ink-secondary);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .slider-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-herbarium);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 class="brand-title">Herbarium Numericum · <code>d3-plant-lib</code></h1>
+      <p class="brand-subtitle">
+        Geometría paramétrica botánica sobre D3.js v7+ (Curvas Bézier polares, enredaderas con ahusamiento alométrico y &lt;use&gt; instancing)
+      </p>
+    </div>
+
+    <div class="global-toolbar">
+      <label class="slider-group" title="Redimensiona el contenedor para probar el ResizeObserver reactivo">
+        <span>Escala Contenedor (ResizeObserver):</span>
+        <input id="width-slider" type="range" min="60" max="100" value="100" />
+        <strong id="width-label">100%</strong>
+      </label>
+      <button id="btn-season-all" class="btn">🌿 Mutar Estación Global</button>
+    </div>
+  </header>
+
+  <main id="dashboard-grid">
+    <!-- 1. PETAL PIE CHART -->
+    <section class="specimen-card col-5">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">I. <code>PetalPieChart</code></h2>
+          <p class="card-meta">Corola de polinización: longitud = visitas/h · curvatura = eficiencia de néctar</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-petal-randomize" class="btn btn-outline">Florecer / Mutar</button>
+          <button id="btn-petal-add" class="btn btn-outline">+ Pétalo</button>
+          <button id="btn-petal-remove" class="btn btn-outline">− Pétalo</button>
+        </div>
+      </div>
+      <div id="flower-chart-container" class="chart-stage"></div>
+      <div class="legend-note">
+        <span>Morfología: Curvas Bézier cúbicas cerradas + venación acródroma + estambres</span>
+        <span>Interpolación: <code>attrTween('d')</code> en espacio de parámetros</span>
+      </div>
+    </section>
+
+    <!-- 2. VINE BAR CHART -->
+    <section class="specimen-card col-7">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">II. <code>VineBarChart</code></h2>
+          <p class="card-meta">Enredaderas: altura = biomasa (cm) · hojas (&lt;use&gt;) = área foliar · zarcillo = vigor</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-vine-randomize" class="btn btn-outline">Crecimiento Estacional</button>
+          <button id="btn-vine-add" class="btn btn-outline">+ Cultivar</button>
+          <button id="btn-vine-remove" class="btn btn-outline">− Podar</button>
+        </div>
+      </div>
+      <div id="vine-chart-container" class="chart-stage"></div>
+      <div class="legend-note">
+        <span>Eje X: Tallo con nudos (<code>#botanical-node</code>) · Eje Y: Espinas (<code>#botanical-thorn</code>)</span>
+        <span>Hojas orientadas según normal/tangente de Frenet-Serret</span>
+      </div>
+    </section>
+
+    <!-- 3. STEM LINE CHART -->
+    <section class="specimen-card col-12">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">III. <code>StemLineChart</code></h2>
+          <p class="card-meta">Flujo de savia y ramificación leñosa a lo largo del ciclo fenológico</p>
+        </div>
+        <div class="card-controls">
+          <button id="btn-stem-randomize" class="btn btn-outline">Impulso de Savia (Actualizar Serie)</button>
+        </div>
+      </div>
+      <div id="stem-chart-container" class="chart-stage-compact"></div>
+      <div class="legend-note">
+        <span>Tallo principal con perturbación coherente C∞ y brotes caulinares instanciados vía <code>&lt;use href="#...-bud"&gt;</code></span>
+        <span>Bifurcaciones laterales generadas con espirales amortiguadas</span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
