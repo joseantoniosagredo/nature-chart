@@ -157,6 +157,37 @@ export class PetalPieChart<TData> extends BaseChart<
 
     const { duration, delayPerItem, ease } = this.transitionConfig;
 
+    // Snapshot de la geometría previa: el tween del cuerpo sobrescribe `previousGeometry`
+    // al arrancar, por lo que la venación debe leer el estado inicial desde aquí.
+    const startGeometry = new Map(this.previousGeometry);
+
+    // Interpolación en espacio de parámetros para la venación (no de cadenas SVG)
+    const venationTween =
+      (from: PetalGeometryParams, to: PetalGeometryParams) =>
+      (t: number): string => {
+        if (!showVenation) return '';
+        const inv = 1 - t;
+        return generatePetalVenationPath({
+          ...to,
+          startAngle: from.startAngle * inv + to.startAngle * t,
+          endAngle: from.endAngle * inv + to.endAngle * t,
+          innerRadius: from.innerRadius * inv + to.innerRadius * t,
+          outerRadius: from.outerRadius * inv + to.outerRadius * t,
+          curvature: from.curvature * inv + to.curvature * t,
+        });
+      };
+
+    const sproutGeometry = (geometry: PetalGeometryParams): PetalGeometryParams => {
+      const midAngle = (geometry.startAngle + geometry.endAngle) * 0.5;
+      return {
+        ...geometry,
+        startAngle: midAngle - 0.02,
+        endAngle: midAngle + 0.02,
+        outerRadius: geometry.innerRadius + 2,
+        curvature: 0.2,
+      };
+    };
+
     // 1. Selección y Data Join de Pétalos (g.petal-node)
     this.corollaGroup
       .selectAll<SVGGElement, ComputedPetalDatum<TData>>('g.petal-node')
@@ -204,16 +235,8 @@ export class PetalPieChart<TData> extends BaseChart<
             .delay((_, i) => i * delayPerItem)
             .ease(ease)
             .attrTween('d', (d) => {
-              const midAngle = (d.geometry.startAngle + d.geometry.endAngle) * 0.5;
-              const sproutState: PetalGeometryParams = {
-                ...d.geometry,
-                startAngle: midAngle - 0.02,
-                endAngle: midAngle + 0.02,
-                outerRadius: d.geometry.innerRadius + 2,
-                curvature: 0.2,
-              };
               this.previousGeometry.set(d.key, d.geometry);
-              return createPetalPathInterpolator(sproutState, d.geometry);
+              return createPetalPathInterpolator(sproutGeometry(d.geometry), d.geometry);
             });
 
           group
@@ -222,9 +245,7 @@ export class PetalPieChart<TData> extends BaseChart<
             .duration(duration)
             .delay((_, i) => i * delayPerItem)
             .ease(ease)
-            .attr('d', (d) =>
-              showVenation ? generatePetalVenationPath(d.geometry) : ''
-            );
+            .attrTween('d', (d) => venationTween(sproutGeometry(d.geometry), d.geometry));
 
           return group;
         },
@@ -242,7 +263,7 @@ export class PetalPieChart<TData> extends BaseChart<
             .duration(duration)
             .ease(ease)
             .attrTween('d', (d) => {
-              const prev = this.previousGeometry.get(d.key) ?? d.geometry;
+              const prev = startGeometry.get(d.key) ?? d.geometry;
               this.previousGeometry.set(d.key, d.geometry);
               return createPetalPathInterpolator(prev, d.geometry);
             });
@@ -253,25 +274,23 @@ export class PetalPieChart<TData> extends BaseChart<
             .duration(duration)
             .ease(ease)
             .attr('opacity', showVenation ? 0.45 : 0)
-            .attrTween('d', (d) => {
-              if (!showVenation) return () => '';
-              const prev = this.previousGeometry.get(d.key) ?? d.geometry;
-              return (t: number) => {
-                const inv = 1 - t;
-                return generatePetalVenationPath({
-                  ...d.geometry,
-                  startAngle: prev.startAngle * inv + d.geometry.startAngle * t,
-                  endAngle: prev.endAngle * inv + d.geometry.endAngle * t,
-                  outerRadius: prev.outerRadius * inv + d.geometry.outerRadius * t,
-                  curvature: prev.curvature * inv + d.geometry.curvature * t,
-                });
-              };
-            });
+            .attrTween('d', (d) =>
+              venationTween(startGeometry.get(d.key) ?? d.geometry, d.geometry)
+            );
 
           return update;
         },
-        (exit) =>
+        (exit) => {
           exit
+            .select<SVGPathElement>('path.petal-venation')
+            .transition()
+            .duration(duration * 0.65)
+            .ease(ease)
+            .attrTween('d', (d) =>
+              venationTween(d.geometry, { ...d.geometry, outerRadius: d.geometry.innerRadius })
+            );
+
+          return exit
             .each((d) => {
               this.previousGeometry.delete(d.key);
             })
@@ -294,7 +313,8 @@ export class PetalPieChart<TData> extends BaseChart<
             .catch(() => {
               // Si la transición se interrumpe antes de terminar, limpiamos de forma segura
               exit.remove();
-            })
+            });
+        }
       );
 
     // 2. Estambres radiales alrededor del pistilo (opcional)
