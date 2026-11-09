@@ -1,7 +1,7 @@
-# CLAUDE.md — Project Instructions for `d3-plant-lib`
+# CLAUDE.md — Project Instructions for `nature-chart`
 
 ## Project Overview
-`d3-plant-lib` is a botanical and organic parametric data visualization library in **TypeScript** built on **D3.js v7+** and bundled with **Vite**. Visual encodings use nature and botany metaphors (cubic Bézier flower petals, allometrically tapered climbing vines, phyllotactic `<use>` leaves, coiling tendrils, and woody stems).
+`nature-chart` is a botanical and organic parametric data visualization library in **TypeScript** built on **D3.js v7+** and bundled with **Vite**. Visual encodings use nature and botany metaphors (cubic Bézier flower petals, allometrically tapered climbing vines, phyllotactic `<use>` leaves, coiling tendrils, and woody stems).
 
 ---
 
@@ -17,21 +17,21 @@
 
 ## Architecture & Module Map
 
-- **[`src/types.ts`](./src/types.ts)**: Central contract definitions. Contains all geometry parameter interfaces, `BotanicalPalette`, `ChartDimensions`, generic data accessors (`KeyAccessor<T>`, `NumericAccessor<T>`, `StringAccessor<T>`), and chart configurations.
-- **[`src/geometry/OrganicGeometry.ts`](./src/geometry/OrganicGeometry.ts)**: Pure mathematical utilities:
+- **[`src/types.ts`](./packages/core/src/types.ts)**: Central contract definitions. Contains all geometry parameter interfaces, `BotanicalPalette`, `ChartDimensions`, generic data accessors (`KeyAccessor<T>`, `NumericAccessor<T>`, `StringAccessor<T>`), and chart configurations.
+- **[`src/geometry/OrganicGeometry.ts`](./packages/core/src/geometry/OrganicGeometry.ts)**: Pure mathematical utilities:
   - `hashStringToSeed(key)` & `organicNoise1D(t, seed)` — Deterministic $C^\infty$ harmonic coherent noise.
   - `generatePetalPath(params)` & `generatePetalVenationPath(params)` — Polar cubic Bézier petals and acrodromous venation.
   - `generateVineSkeleton(params)` — Computes tapered stem `bodyPath`, vascular `centerlinePath`, Frenet-Serret `nodes` (`OrientedPoint2D` with normal/tangent vectors), and `apex`.
   - `generateTendrilPath(params)` — Decaying Archimedean/logarithmic spiral tendrils.
   - `generateStemPath(params)` — Coherently perturbed woody stems.
-- **[`src/core/ChartEnvironment.ts`](./src/core/ChartEnvironment.ts)**: Orchestrates the `<svg>`, `ResizeObserver`, `requestAnimationFrame` render queue (`scheduleRender`), layer groups (`backgroundLayer`, `axisLayer`, `chartLayer`, `overlayLayer`), and shared `<defs>` (`#...-leaf`, `#...-thorn`, `#...-node`, `#...-bud`, organic displacement filter, gradients).
-- **[`src/core/BaseChart.ts`](./src/core/BaseChart.ts)**: Abstract base class for all charts (`BaseChart<TData, TConfig>`), standardizing `init()`, `update(data)`, `resize(dimensions)`, and `destroy()`.
-- **[`src/core/AxisHelper.ts`](./src/core/AxisHelper.ts)**: Replaces rigid `d3-axis` domain lines with organic stems and renders ticks using `<use href="#...">` (`thorn`, `node`, `leaf`). Supports both continuous (`ScaleLinear`, `ScaleTime`) and ordinal (`ScaleBand`, `ScalePoint`) D3 scales.
-- **[`src/charts/`](./src/charts/)**:
+- **[`src/core/ChartEnvironment.ts`](./packages/core/src/core/ChartEnvironment.ts)**: Orchestrates the `<svg>`, `ResizeObserver`, `requestAnimationFrame` render queue (`scheduleRender`), layer groups (`backgroundLayer`, `axisLayer`, `chartLayer`, `overlayLayer`), and shared `<defs>` (`#...-leaf`, `#...-thorn`, `#...-node`, `#...-bud`, organic displacement filter, gradients).
+- **[`src/core/BaseChart.ts`](./packages/core/src/core/BaseChart.ts)**: Abstract base class for all charts (`BaseChart<TData, TConfig>`), standardizing `init()`, `update(data)`, `resize(dimensions)`, and `destroy()`.
+- **[`src/core/AxisHelper.ts`](./packages/core/src/core/AxisHelper.ts)**: Replaces rigid `d3-axis` domain lines with organic stems and renders ticks using `<use href="#...">` (`thorn`, `node`, `leaf`). Supports both continuous (`ScaleLinear`, `ScaleTime`) and ordinal (`ScaleBand`, `ScalePoint`) D3 scales.
+- **[`src/charts/`](./packages/core/src/charts/)**:
   - `PetalPieChart.ts` — Polar floral chart with Bézier petals, stamens, and central pistil.
   - `VineBarChart.ts` — Climbing vine bar chart encoding primary height, secondary foliage (`<use>` leaves), and tertiary apical tendrils.
   - `StemLineChart.ts` — Continuous woody stem chart with buds and lateral bifurcations.
-- **[`index.html`](./index.html) & [`src/main.ts`](./src/main.ts)**: Interactive Herbarium playground served by Vite.
+- **[`index.html`](./packages/core/index.html) & [`src/main.ts`](./packages/core/src/main.ts)**: Interactive Herbarium playground served by Vite.
 
 ---
 

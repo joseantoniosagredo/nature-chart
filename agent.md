@@ -1,12 +1,12 @@
-# Agent Development Guide (`d3-plant-lib`)
+# Agent Development Guide (`nature-chart`)
 
-This document defines the architectural, mathematical, performance, and coding rules for any AI agent or developer contributing to **`d3-plant-lib`**.
+This document defines the architectural, mathematical, performance, and coding rules for any AI agent or developer contributing to **`nature-chart`**.
 
 ---
 
 ## 1. Core Philosophy & Aesthetic Invariants
 
-`d3-plant-lib` is a botanical and organic data visualization library built on **D3.js v7+** and **TypeScript**.
+`nature-chart` is a botanical and organic data visualization library built on **D3.js v7+** and **TypeScript**.
 
 1. **No Rigid Geometry**: Never render standard rectangular bars (`<rect>`), straight axis lines (`d3-axis`), or circular pie wedges (`d3.arc`). Every datum must be expressed through parametric botanical morphology:
    - **Petals**: Closed polar cubic Bézier curves with venation and stamens (`PetalPieChart`).

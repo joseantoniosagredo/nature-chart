@@ -1,25 +1,17 @@
 {
-  "name": "d3-plant-lib",
+  "name": "nature-chart",
   "version": "1.0.0",
-  "description": "Botanical & organic parametric data visualization library built on D3.js v7+",
+  "private": true,
+  "description": "Botanical & organic parametric data visualization library monorepo",
   "license": "ISC",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "sideEffects": false,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "d3": "^7.9.0"
-  },
-  "devDependencies": {
-    "@types/d3": "^7.4.3",
-    "typescript": "^5.8.2",
-    "vite": "^8.3.5"
+    "dev": "npm run dev -w @nature-chart/core",
+    "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview -w @nature-chart/core",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }
